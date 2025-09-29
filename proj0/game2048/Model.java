@@ -1,11 +1,12 @@
 package game2048;
 
 import java.util.Formatter;
+import java.util.HashMap;
 import java.util.Observable;
 
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author sonwwall
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -109,6 +110,14 @@ public class Model extends Observable {
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
+        board.setViewingPerspective(side);
+
+
+
+        changed = MoveAll();
+
+        board.setViewingPerspective(Side.NORTH);
+
 
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
@@ -117,6 +126,70 @@ public class Model extends Observable {
         checkGameOver();
         if (changed) {
             setChanged();
+        }
+        return changed;
+    }
+
+    //写一个方法，实现每一个方块的移动，接受参数，某个坐标
+    //每一个方块都需要移动，所以每一个都需要进行判断：1.能否移动2.能否合并，而且需要从上到下进行判断
+    public  boolean BlockMove(int col,int row, HashMap<String, Integer> map){
+        //先创建一个方块
+        if (board.tile(col,row)==null) {
+            return false;
+        }
+        Tile block=board.tile(col, row);
+        //判断一下方块上面是什么情况
+        for(int i=row+1;i<board.size();i++){
+            //方块上面没东西
+            if(board.tile(col,i)==null){
+                continue;
+            }
+            //方块上面有不相同的方块
+            if(board.tile(col,i).value()!=block.value()){
+                board.move(col,i-1,block);
+                return true;
+            }
+            //方块上面有相同的方块
+            if(board.tile(col,i).value()==block.value()){
+                //判断一下这次要合并的方块是否在哈希表内
+                if(map.containsKey(String.valueOf(col)+String.valueOf(i))){
+                    board.move(col,i-1,block);
+                    return true;
+                }
+                board.move(col,i,block);
+                score+=2*block.value();
+                //将已经移动后的方块加入哈希表
+                map.put(String.valueOf(col)+String.valueOf(i),1);
+
+                return true;
+            }
+        }
+        //如果上面一直没东西
+        board.move(col,board.size()-1,block);
+        return true;
+
+
+    }
+
+    //写一个方法，实现某一列的移动，接受参数：某列
+    public boolean MoveCol(int col,HashMap<String, Integer> map){
+        boolean changed=false;
+        for(int i=board.size()-2;i>=0;i--){
+            if(BlockMove(col,i,map)){
+                changed=true;
+            }
+        }
+        return changed;
+    }
+
+    //写一个方法，实现所有方块的移动
+    public boolean MoveAll(){
+        boolean changed=false;
+        HashMap<String, Integer> map = new HashMap<>();
+        for(int i=0;i<board.size();i++){
+            if(MoveCol(i,map)){
+                changed=true;
+            }
         }
         return changed;
     }
@@ -138,6 +211,13 @@ public class Model extends Observable {
      * */
     public static boolean emptySpaceExists(Board b) {
         // TODO: Fill in this function.
+        for(int row=0;row<b.size();row++) {
+            for(int col=0;col<b.size();col++) {
+                if(b.tile(row,col)==null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -148,6 +228,13 @@ public class Model extends Observable {
      */
     public static boolean maxTileExists(Board b) {
         // TODO: Fill in this function.
+        for(int row=0;row<b.size();row++) {
+            for(int col=0;col<b.size();col++) {
+                if(b.tile(row,col)!=null && b.tile(row,col).value()==MAX_PIECE){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -159,6 +246,27 @@ public class Model extends Observable {
      */
     public static boolean atLeastOneMoveExists(Board b) {
         // TODO: Fill in this function.
+        //先判断一下有没有空的
+        if(emptySpaceExists(b)){
+            return true;
+        }
+        //再判断一下有没有相邻的
+        for(int row=0;row<b.size();row++) {
+            for(int col=0;col<b.size();col++) {
+                {
+                    if(row+1<b.size()){
+                        if(b.tile(row,col).value()==b.tile(row+1,col).value()){
+                            return true;
+                        }
+                    }
+                    if(col+1<b.size()){
+                        if(b.tile(row,col).value()==b.tile(row,col+1).value()){
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
         return false;
     }
 
